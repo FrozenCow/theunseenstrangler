@@ -41,13 +41,35 @@ Array.prototype.insertBefore = function(elem,before) {
 };
 
 Array.prototype.insertAfter = function(elem,after) {
-	var i = this.indexOf(before);
+	var i = this.indexOf(after);
 	if (i < 0) { throw "insertAfter: after not found"; }
 	this.splice(i+1,0,elem);
 };
 
 Array.prototype.sample = function() {
   return this[Math.floor(this.length*Math.random())];
+};
+
+Array.prototype.max = function(){
+  return Math.max.apply(Math, array);
+};
+
+Array.prototype.min = function(){
+  return Math.min.apply(Math, array);
+};
+
+Array.prototype.maxF = function(compare) {
+  return this.reduce(function(prev,current) {
+    if (prev === undefined || compare(prev,current) < 0) { return current; }
+    return prev;
+  },undefined);
+};
+
+Array.prototype.minF = function(compare) {
+  return this.reduce(function(prev,current) {
+    if (prev === undefined || compare(prev,current) > 0) { return current; }
+    return prev;
+  },undefined);
 };
 
 Object.prototype.merge = function(dst,src) {
@@ -65,6 +87,15 @@ Boolean.prototype.toNumber = function() {
 // Random number between -1 and 1
 Math.rnd = function() {
   return (Math.random()-0.5)*2;
+};
+
+Math.clamp = function(v,min,max) {
+  return Math.max(min,Math.min(max,v));
+};
+
+Math.sign = function(v) {
+  return v === 0 ? 0 :
+    (v < 0 ? -1 : +1);
 };
 
 define(['eventemitter'],function(eventemitter) {

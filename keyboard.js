@@ -6,7 +6,8 @@ define(function() {
 		'40': 'down',
 		'39': 'right',
 		'37': 'left',
-		'13': 'enter'
+		'13': 'enter',
+		'16': 'shift'
 	};
 	var i;
 	// Alphabetic characters

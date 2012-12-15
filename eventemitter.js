@@ -23,9 +23,9 @@ define(function() {
 		},
 		once: function(name, fun) {
 			var me = this;
-			me.on(name, function wrapper(arg) {
+			me.on(name, function wrapper(/*...*/) {
 				if (me.removeListener(name, wrapper)) {
-					fun(arg);
+					return fun.apply(this,arguments);
 				}
 			});
 		},

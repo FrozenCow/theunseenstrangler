@@ -32,6 +32,14 @@ define(['eventemitter','objectmanager','graphics'], function(eventemitter,Object
 			next(g);
 		});
 
+		this.chains.update.push(this.chains.update.objects = function(dt,next) {
+			me.objects.lists.update.each(function(o) {
+				o.update(dt);
+			});
+			me.objects.handlePending();
+			next(dt);
+		});
+
 		this.width = canvas.width;
 		this.height = canvas.height;
 		this.canvas = canvas;
@@ -55,6 +63,7 @@ define(['eventemitter','objectmanager','graphics'], function(eventemitter,Object
 	}
 	var p = Game.prototype;
 	eventemitter._inherit(p);
+
 	p.start = function() {
 		if (this.isRunning) { throw 'Already started'; }
 		var me = this;
@@ -74,20 +83,16 @@ define(['eventemitter','objectmanager','graphics'], function(eventemitter,Object
 
 		var lastUpdate=new Date().getTime();
 		requestAnimationFrame(update);
+
 		function update() {
 			var now=new Date().getTime();
 			var dt = (now-lastUpdate)/1000;
 			lastUpdate = now;
 			dt = Math.min(1/30,dt);
 
-			me.time += dt;
+			chain(me.chains.update,function(dt) {})(dt);
 
-			chain(me.chains.update,function(dt) {
-				me.objects.lists.update.each(function(o) {
-					o.update(dt);
-				});
-				me.objects.handlePending();
-			})(dt);
+			me.time += dt;
 
 			me.graphics.clear();
 

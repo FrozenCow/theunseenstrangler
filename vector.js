@@ -32,6 +32,9 @@ define(function() {
 	p.length = function() {
 		return Math.sqrt(this.x*this.x+this.y*this.y);
 	};
+	p.length2 = function() {
+		return this.x*this.x+this.y*this.y;
+	};
 	p.distanceTo = function(x,y) {
 		var dx = this.x-x;
 		dx*=dx;
@@ -88,6 +91,15 @@ define(function() {
 		r = Math.atan2(this.y, this.x)+r;
 		this.x = Math.cos(r)*l;
 		this.y = Math.sin(r)*l;
+	};
+	p.angleToward = function(x,y) {
+		var a1 = Math.atan2(this.y, this.x);
+		var a2 = Math.atan2(y, x);
+
+		if (a1 < -Math.PI / 2 && a2 > Math.PI / 2) a1 += Math.PI * 2;
+		if (a2 < -Math.PI /2 && a1 > Math.PI / 2) a2 += Math.PI * 2;
+
+		return a2 - a1;
 	};
 
 	// Add helper vector-functions.
