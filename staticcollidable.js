@@ -8,14 +8,6 @@ define(['vector','linesegment'],function(Vector,LineSegment) {
 			prevPoint = point;
 		});
 
-		// Link segments (next/previous)
-		var prev = lineSegments[lineSegments.length-1];
-		lineSegments.forEach(function(segment,i) {
-			segment.previous = prev;
-			prev.next = segment;
-			prev = segment;
-		});
-
 		return lineSegments;
 	}
 
