@@ -28,6 +28,9 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 	g.objects.lists.start = g.objects.createIndexList('start');
 	g.objects.lists.finish = g.objects.createIndexList('finish');
 	g.objects.lists.enemy = g.objects.createIndexList('enemy');
+	g.objects.lists.body = g.objects.createIndexList('body');
+	g.objects.lists.usable = g.objects.createIndexList('usable');
+	g.objects.lists.collectable = g.objects.createIndexList('collectable');
 
 	// Gravity.
 	g.gravity = (function() {
@@ -414,67 +417,160 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 			if (this.died) { return; }
 			this.died = true;
 			g.objects.remove(this);
+			g.objects.add(new DeadBody(this.position.x,this.position.y));
 		};
 	})(Person.prototype);
 
 	function Player() {
 		Person.call(this);
+		this.changeState(controlState(this));
 	}
 	(function(p) {
 		p.__proto__ = Person.prototype;
 		p.update = function(dt) {
-			if (this.strangling) {
-				if (this.strangling.died) {
-					this.strangling.strangler = null;
-					this.strangling = null;
-				} else {
-					return;
-				}
-			}
-			var speed = g.keys.shift
-				? 3
-				: 1;
-			this.updateMovement(dt,slide(g.keys.a,g.keys.d),slide(g.keys.w,g.keys.s),speed);
-
-			// Facing
-			t.set(g.mouse.x-400,g.mouse.y-300);
-			t.normalizeOr(1,0);
-			this.facing.setV(t);
-
-			// Shooting
-			this.firetime -= dt;
-			if (g.mouse.buttons[0] && this.firetime < 0) {
-				t.setV(this.facing);
-				t.multiply(20);
-				this.firetime = 0.1;
-				g.objects.add(new Bullet(this,this.position.x,this.position.y,t.x,t.y));
-			}
-			if (g.mouse.buttons[2]) {
-				this.strangle();
+			this.state.update(dt);
+		};
+		p.useInFront = function() {
+			var me = this;
+			var usables = me.getUsablesInFront();
+			console.log(usables);
+			if (usables.length === 0) { return; }
+			var usable = usables[0];
+			if (usable.draggable) {
+				me.changeState(dragbodyState(me,usable));
+			} else if (usable instanceof Enemy) {
+				me.changeState(stranglingState(me,usable));
+			} else if (usable instanceof Safe) {
+				me.changeState(unlocksafeState(me,usable));
 			}
 		};
-		p.strangle = function() {
+		p.getUsablesInFront = function() {
 			var me = this;
-			g.objects.lists.enemy.each(function(enemy,BREAK) {
-				if (me.canstrangle(enemy)) {
-					me.strangling = enemy;
-					enemy.strangler = me;
-					enemy.changeState(strangleState(enemy));
-					return BREAK;
+			var r = [];
+			g.objects.lists.usable.each(function(usable,BREAK) {
+				if (me.hasInFront(usable)) {
+					r.push(usable);
 				}
 			});
+			return r;
 		};
-		p.canstrangle = function(enemy) {
+		p.hasInFront = function(other) {
 			var me = this;
-			function d() {
-				console.log.apply(console,arguments);
-				return arguments[0];
-			}
-			return d(enemy.position.distanceToV(me.position) < me.touchRadius+enemy.touchRadius+10)
-				&& d(g.cantrace(me.position.x,me.position.y,enemy.position.x,enemy.position.y))
-				&& d(me.facing.dot(me.position.x-enemy.position.x,me.position.y-enemy.position.y) < 0);
+			return other.position.distanceToV(me.position) < me.touchRadius+other.touchRadius+10
+				&& g.cantrace(me.position.x,me.position.y,other.position.x,other.position.y)
+				&& me.facing.dot(me.position.x-other.position.x,me.position.y-other.position.y) < 0;
+		};		
+		p.changeState = function(state) {
+			if (this.state) { this.state.disable(); }
+			this.state = state;
+			if (this.state) { this.state.enable(); }
+		};
+		p.action = function() {
+			if (this.state.action) { this.state.action(); }
 		};
 	})(Player.prototype);
+
+	g.on('mousedown',function(button) {
+		if (button === 2) { player.action(); }
+	});
+
+	function controlState(me) {
+		return {
+			enable: function() { },
+			disable: function() { },
+			update: function(dt) {
+				var speed = g.keys.shift
+					? 3
+					: 1;
+				me.updateMovement(dt,slide(g.keys.a,g.keys.d),slide(g.keys.w,g.keys.s),speed);
+
+				// Facing
+				t.set(g.mouse.x-400,g.mouse.y-300);
+				t.normalizeOr(1,0);
+				me.facing.setV(t);
+
+				// Shooting
+				me.firetime -= dt;
+				if (g.mouse.buttons[0] && me.firetime < 0) {
+					t.setV(me.facing);
+					t.multiply(20);
+					me.firetime = 0.1;
+					g.objects.add(new Bullet(me,me.position.x,me.position.y,t.x,t.y));
+				}
+			},
+			action: function() {
+				me.useInFront();
+			}
+		};
+	}
+
+	function stranglingState(me,enemy) {
+		return {
+			enable: function() {
+				me.strangling = enemy;
+				enemy.strangler = me;
+				enemy.changeState(strangleState(enemy,this));
+			},
+			disable: function() {
+				me.strangling = null;
+				enemy.strangler = null;
+			},
+			done: function() {
+				me.changeState(controlState(me));
+			},
+			update: function(dt) {
+
+			},
+			action: function() {
+				// TODO: rapidly tap to succesfully strangle
+			}
+		};
+	}
+
+	function dragbodyState(me,body) {
+		var t = new Vector(0,0);
+		return {
+			enable: function() { },
+			disable: function() { },
+			update: function(dt) {
+				me.updateMovement(dt,slide(g.keys.a,g.keys.d),slide(g.keys.w,g.keys.s),1);
+				t.setV(body.position);
+				t.substractV(me.position);
+				var d = t.length();
+				t.normalizeOr(0,1);
+				t.multiply(Math.min(d,20));
+				t.addV(me.position);
+				body.position.setV(t);
+				me.facing.setV(body.position);
+				me.facing.substractV(me.position);
+				me.facing.normalize();
+				if (body.collectable) {
+					if (vehicle.position.distanceToV(body.position) < (vehicle.touchRadius+body.touchRadius)) {
+						body.collect();
+						me.changeState(controlState(me));
+					}
+				}
+			},
+			action: function() {
+				me.changeState(controlState(me));
+			}
+		};
+	}
+
+	function unlocksafeState(me,safe) {
+		var time = 3;
+		return {
+			enable: function() { },
+			disable: function() { },
+			update: function(dt) {
+				time -= dt;
+				if (time < 0) {
+					safe.unlock(me);
+					me.changeState(controlState(me));
+				}
+			}
+		};
+	}
 
 	function Bullet(owner,x,y,vx,vy) {
 		this.owner = owner;
@@ -524,6 +620,7 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		var t = new Vector(0,0);
 		p.__proto__ = Person.prototype;
 		p.enemy = true;
+		p.usable = true;
 		p.draw = function(g) {
 			Person.prototype.draw.call(this,g);
 			g.fillCenteredText(this.alertness.toFixed(2), this.position.x,this.position.y+40);
@@ -553,9 +650,7 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 			if (this.state) { this.state.enable(); }
 		};
 		p.touch = function(other) {
-			if (other === player) {
-				other.die();
-			}
+			if (this.state.touch) { this.state.touch(other); }
 		};
 		p.rotateToward = function(dt,x,y) {
 			t.set(x,y);
@@ -569,6 +664,9 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 				this.facing.rotate(rotation)
 			}
 		};
+		p.noticedPlayer = function(x,y) {
+			return this.changeState(notifyothersState(this,x,y));
+		};
 	})(Enemy.prototype);
 
 	function idleState(me) {
@@ -580,7 +678,7 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 				if (me.alertness >= 2) {
 					return me.changeState(attackState(me));
 				} else if (me.alertness >= 1) {
-					return me.changeState(investigateState(me,player.position.x,player.position.y));
+					return me.noticedPlayer(player.position.x,player.position.y);
 				}
 			}
 		};
@@ -606,7 +704,7 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 				if (me.alertness >= 2) {
 					return me.changeState(attackState(me));
 				} else if (me.alertness >= 1) {
-					return me.changeState(investigateState(me,player.position.x,player.position.y));
+					return me.noticedPlayer(player.position.x,player.position.y);
 				}
 
 				var p = ps[nextPositionIndex];
@@ -628,7 +726,7 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 				if (me.alertness >= 2) {
 					return me.changeState(attackState(me));
 				} else if (me.alertness >= 1) {
-					return me.changeState(investigateState(me,player.position.x,player.position.y));
+					return me.noticedPlayer(player.position.x,player.position.y);
 				} else if (me.position.distanceTo(px,py) < 30) {
 					return me.changeState(nextState());
 				}
@@ -650,7 +748,7 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 				if (me.alertness >= 2) {
 					return me.changeState(attackState(me));
 				} else if (me.alertness >= 1) {
-					return me.changeState(investigateState(me,player.position.x,player.position.y));
+					return me.noticedPlayer(player.position.x,player.position.y);
 				} else if (waitTime <= 0) {
 					return me.changeState(nextState());
 				}
@@ -665,12 +763,17 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 			disable: function() { },
 			update: function(dt) {
 				if (!me.cantraceplayer) {
-					return me.changeState(investigateState(me,player.position.x,player.position.y));
+					return me.noticedPlayer(player.position.x,player.position.y);
 				} else if (me.alertness < 1) {
 					return me.changeState(me.defaultState(me));
 				}
 				me.rotateToward(dt,player.position.x,player.position.y);
 				me.updateMovement(dt,me.facing.x,me.facing.y,3);
+			},
+			touch: function(other) {
+				if (other === player) {
+					other.die();
+				}
 			}
 		};
 	}
@@ -692,7 +795,30 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		};
 	}
 
-	function strangleState(me) {
+	function notifyothersState(me,px,py) {
+		var time = 0.5;
+		return {
+			enable: function() { },
+			disable: function() { },
+			update: function(dt) {
+				time -= dt;
+				if (time < 0) {
+					notify();
+					me.changeState(investigateState(me,px,py));
+				}
+			}
+		};
+		function notify() {
+			g.objects.lists.enemy.each(function(enemy) {
+				if (me === enemy) { return; }
+				if (enemy.distanceToV(me.position) < 400) {
+					enemy.changeState(investigateState(enemy,px,py));
+				}
+			});
+		}
+	}
+
+	function strangleState(me,stranglingState) {
 		var strangleTime = 1.5;
 		return {
 			clone: arguments.callee,
@@ -702,14 +828,87 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 				strangleTime -= dt;
 				if (strangleTime < 0) {
 					me.die();
+					stranglingState.done();
 				}
 			}
 		};
 	}
 
+	function DeadBody(x,y) {
+		this.position = new Vector(x,y);
+		this.touchRadius = 20;
+	}
+	(function(p) {
+		p.drawable = true;
+		p.usable = true;
+		p.draggable = true;
+		p.draw = function(g) {
+			g.fillStyle('gray');
+			g.fillCircle(this.position.x,this.position.y,20);
+			g.fillStyle('black');
+		};
+	})(DeadBody.prototype);
+
+	function Safe(x,y) {
+		this.position = new Vector(x,y);
+		this.touchRadius = 30;
+	}
+	(function(p) {
+		p.drawable = true;
+		p.usable = true;
+		p.draw = function(g) {
+			var w = this.usable ? 64 : 50;
+			var hw = w/2;
+			g.fillStyle('#333333');
+			g.fillRectangle(this.position.x-hw,this.position.y-hw,w,w);
+			g.fillStyle('black');
+		};
+		p.unlock = function(unlocker) {
+			// Reindex safe, since it is no longer usable.
+			g.objects.remove(this);
+			g.objects.handlePending();
+			this.usable = false;
+			g.objects.add(this);
+
+			g.objects.add(new MoneyBag(this.position.x+this.touchRadius+20,this.position.y));
+		};
+	})(Safe.prototype);
+
+	function MoneyBag(x,y) {
+		this.position = new Vector(x,y);
+		this.touchRadius = 20;
+	}
+	(function(p) {
+		p.drawable = true;
+		p.usable = true;
+		p.draggable = true;
+		p.collectable = true;
+		p.draw = function(g) {
+			g.fillStyle('yellow');
+			g.fillCircle(this.position.x,this.position.y,20);
+			g.fillStyle('black');
+		};
+		p.collect = function() {
+			g.objects.remove(this);
+		};
+	})(MoneyBag.prototype);
+
+	function Vehicle(x,y) {
+		this.position = new Vector(x,y);
+		this.touchRadius = 50;
+	}
+	(function(p) {
+		p.drawable = true;
+		p.draw = function(g) {
+			g.fillStyle('red');
+			g.fillCircle(this.position.x,this.position.y,50);
+			g.fillStyle('black');
+		};
+	})(Vehicle.prototype);
+
 	var player = new Player();
 	var enemies = [1].map(function() {
-		var enemy = new Enemy(400,400,function(me) {
+		var enemy = new Enemy(200,400,function(me) {
 			return patrolState(me,[
 			new Vector(500,500),
 			new Vector(200,500),
@@ -727,6 +926,12 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		new Vector(800,600),
 		new Vector(800,0)
 	],true));
+	g.objects.add(new Safe(100,100));
+
+	var vehicle = new Vehicle(300,100);
+	g.objects.add(vehicle);
+
+
 [new StaticCollidable([new Vector(459.6938840729227,233.02376624181719),new Vector(489.6936453206643,232.9040788218458),new Vector(555.9998806238708,287.9401562900143),new Vector(526.0001193761292,288.0598437099857)],false),new StaticCollidable([new Vector(800,199),new Vector(800,229),new Vector(596,232),new Vector(596,202)],false),new StaticCollidable([new Vector(215,234),new Vector(211.6127093586714,204.19184235630843),new Vector(486.3063546793357,203.0959211781542),new Vector(489.6936453206643,232.9040788218458)],false),new StaticCollidable([new Vector(180,190),new Vector(210,190),new Vector(215,234),new Vector(185,234)],false),new StaticCollidable([new Vector(94.03505811753999,318.4499165426997),new Vector(124,317),new Vector(129.98247094123,595.2750417286502),new Vector(100.01752905877,596.7249582713498)],false),new StaticCollidable([new Vector(0,323),new Vector(0,293),new Vector(124,287),new Vector(124,317)],false),new StaticCollidable([new Vector(179.8367347310764,158.97959890451617),new Vector(179.9946272810562,188.97918340068313),new Vector(135.0789462749899,183.99979224808348),new Vector(134.9210537250101,154.00020775191652)],false),new StaticCollidable([new Vector(179,0),new Vector(209,0),new Vector(210,190),new Vector(180,190)],false),new StaticCollidable([new Vector(0,185),new Vector(0,155),new Vector(52,155),new Vector(52,185)],false),new StaticCollidable([new Vector(800,0),new Vector(0,0),new Vector(0,600),new Vector(800,600)],true)].
 	forEach(function(sc) {
 		g.objects.add(sc);
@@ -742,12 +947,10 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		function enable() {
 			g.chains.update.push(update);
 			g.chains.draw.push(draw);
-			g.on('keydown',keydown);
 		}
 		function disable() {
 			g.chains.update.remove(update);
 			g.chains.draw.remove(draw);
-			g.removeListener('keydown',keydown);
 		}
 
 		function update(dt,next) {
@@ -757,9 +960,6 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		function draw(g,next) {
 			// Draw HUD
 			next(g);
-		}
-		function keydown(key) {
-			// Handle gameplay keys
 		}
 		return me;
 	}
