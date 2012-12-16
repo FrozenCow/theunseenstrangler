@@ -91,6 +91,7 @@ define(function() {
 		r = Math.atan2(this.y, this.x)+r;
 		this.x = Math.cos(r)*l;
 		this.y = Math.sin(r)*l;
+		return this;
 	};
 	p.angleToward = function(x,y) {
 		var a1 = Math.atan2(this.y, this.x);

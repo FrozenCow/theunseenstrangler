@@ -19,6 +19,15 @@ define(['intrusivelist','dintrusivelist'],function(IntrusiveList,DIntrusiveList)
 	p.remove = function(o) {
 		this.pendingRemove.push(o);
 	};
+	p.clear = function(o) {
+		var me = this;
+		me.handlePending();
+		me.objects.each(function(o) {
+			console.log(o);
+			me.remove(o);
+		});
+		me.handlePending();
+	};
 	p.handlePending = function() {
 		var me = this;
 		me.pendingAdd.each(function(o,_,DELETE) {

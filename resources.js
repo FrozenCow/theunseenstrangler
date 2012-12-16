@@ -26,7 +26,7 @@ define(['eventemitter'],function(eventemitter) {
 				return callback(null,img);
 			}
 			img = new Image();
-			img.src = name+'.png';
+			img.src = 'assets/'+name+'.png';
 			img.onload = function() {
 				me.images[name] = img;
 				callback(null,img);
@@ -47,7 +47,7 @@ define(['eventemitter'],function(eventemitter) {
 				me.audio[name] = a;
 				return callback(null,a);
 			}
-			a = new Audio(name+'.wav');
+			a = new Audio('assets/'+name+'.wav');
 			try {
 				a.addEventListener('canplaythrough', markdone, false);
 			} catch(e) { console.error(e); }

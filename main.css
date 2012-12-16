@@ -8,6 +8,9 @@ body {
 	font-family:arial;
 	font-size:15px;
 }
+#main {
+	/*background-color: black;*/
+}
 #main, .overlay {
 	width: 800px;
 	height: 600px;

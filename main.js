@@ -2,7 +2,7 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 	var t = new Vector(0,0);
 	var t2 = new Vector(0,0);
 	var rs = {
-		'images': ['test'],
+		'images': ['test','mouse','moneybag','car','safe_open','safe_closed','player_head','player_body','player_dead','player_body_strangle','player_body_drag','player_shoe','floor','wall100','wall200','wall300','wall600'],
 		'audio': []
 	};
 
@@ -13,7 +13,7 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		g.resources.status.on('changed',function() {
 			g.graphics.context.clearRect(0,0,800,600);
 			g.graphics.context.fillStyle = 'black';
-			g.graphics.context.font = 'monospace';
+			g.graphics.context.font = 'arial';
 			g.graphics.fillCenteredText('Preloading ' + g.resources.status.ready + '/' + g.resources.status.total + '...',400,300);
 		});
 	});
@@ -28,66 +28,76 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 	g.objects.lists.start = g.objects.createIndexList('start');
 	g.objects.lists.finish = g.objects.createIndexList('finish');
 	g.objects.lists.enemy = g.objects.createIndexList('enemy');
-	g.objects.lists.body = g.objects.createIndexList('body');
 	g.objects.lists.usable = g.objects.createIndexList('usable');
 	g.objects.lists.collectable = g.objects.createIndexList('collectable');
+	g.objects.lists.shadow = g.objects.createIndexList('shadow');
 
 	// Gravity.
-	g.gravity = (function() {
-		var me = {
-			enabled: true,
-			enable: enable,
-			disable: disable,
-			toggle: toggle
-		};
-		function enable() { me.enabled = true; }
-		function disable() { me.enabled = false; }
-		function toggle() { if (me.enabled) disable(); else enable(); }
-		function update(dt,next) {
-			g.objects.lists.particle.each(function(p) {
-				if (me.enabled) {
-					p.velocity.y += 200*dt;
-				}
-			});
-			next(dt);
-		}
-		g.chains.update.push(update);
-		return me;
-	})();
+	// g.gravity = (function() {
+	// 	var me = {
+	// 		enabled: true,
+	// 		enable: enable,
+	// 		disable: disable,
+	// 		toggle: toggle
+	// 	};
+	// 	function enable() { me.enabled = true; }
+	// 	function disable() { me.enabled = false; }
+	// 	function toggle() { if (me.enabled) disable(); else enable(); }
+	// 	function update(dt,next) {
+	// 		g.objects.lists.particle.each(function(p) {
+	// 			if (me.enabled) {
+	// 				p.velocity.y += 200*dt;
+	// 			}
+	// 		});
+	// 		next(dt);
+	// 	}
+	// 	g.chains.update.push(update);
+	// 	return me;
+	// })();
 
 	// Camera
 	(function() {
-		g.chains.draw.insertBefore(function(g,next) {
+		game.camera = new Vector(0,0);
+		function drawCamera(g,next) {
 			g.save();
-			g.context.translate(-player.position.x+400, -player.position.y+300);
+			g.context.translate(game.camera.x,game.camera.y);
 			next(g);
 			g.restore();
-		},g.chains.draw.objects);
+		}
+		g.chains.draw.camera = drawCamera;
+		g.chains.draw.insertBefore(drawCamera,g.chains.draw.objects);
+
+		function updateCamera(dt,next) {
+			game.camera.set(-player.position.x+400, -player.position.y+300);
+			next(dt);
+		}
+		g.chains.update.camera = updateCamera;
+		g.chains.update.push(updateCamera);
 	})();
 
 	// Auto-refresh
-	(function() {
-		var timeout = setTimeout(function() {
-			document.location.reload(true);
-		}, 3000);
-		g.once('keydown',function() {
-			disable();
-		});
-		g.once('mousemove',function() {
-			disable();
-		});
-		g.chains.draw.push(draw);
-		function draw(g,next) {
-			g.fillStyle('#ff0000');
-			g.fillCircle(800,0,30);
-			g.fillStyle('black');
-			next(g);
-		}
-		function disable() {
-			clearTimeout(timeout);
-			g.chains.draw.remove(draw);
-		}
-	})();
+	// (function() {
+	// 	var timeout = setTimeout(function() {
+	// 		document.location.reload(true);
+	// 	}, 3000);
+	// 	g.once('keydown',function() {
+	// 		disable();
+	// 	});
+	// 	g.once('mousemove',function() {
+	// 		disable();
+	// 	});
+	// 	g.chains.draw.push(draw);
+	// 	function draw(g,next) {
+	// 		g.fillStyle('#ff0000');
+	// 		g.fillCircle(800,0,30);
+	// 		g.fillStyle('black');
+	// 		next(g);
+	// 	}
+	// 	function disable() {
+	// 		clearTimeout(timeout);
+	// 		g.chains.draw.remove(draw);
+	// 	}
+	// })();
 
 	// Collision
 	(function() {
@@ -290,91 +300,91 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 	})();
 
 	// Draw collidables
-	(function() {
-		var game = g;
-		game.chains.draw.push(function(g,next) {
-			game.objects.lists.collidable.each(function(collidable) {
-				collidable.collisionlines.forEach(function(collisionline) {
-					g.strokeLine(collisionline.start.x,collisionline.start.y,collisionline.end.x,collisionline.end.y);
-				});
-			});
-			next(g);
-		});
-	})();
+	// (function() {
+	// 	var game = g;
+	// 	game.chains.draw.push(function(g,next) {
+	// 		game.objects.lists.collidable.each(function(collidable) {
+	// 			collidable.collisionlines.forEach(function(collisionline) {
+	// 				g.strokeLine(collisionline.start.x,collisionline.start.y,collisionline.end.x,collisionline.end.y);
+	// 			});
+	// 		});
+	// 		next(g);
+	// 	});
+	// })();
 
 	// Draw walls
-	(function() {
-		var t = new Vector(0,0);
-		var t2 = new Vector(0,0);
+	// (function() {
+	// 	var t = new Vector(0,0);
+	// 	var t2 = new Vector(0,0);
 
-		var thickness = 30;
-		var hthickness = thickness*0.5;
+	// 	var thickness = 30;
+	// 	var hthickness = thickness*0.5;
 
-		g.on('mousedown',function(button,downx,downy) {
-			var c = null;
+	// 	g.on('mousedown',function(button,downx,downy) {
+	// 		var c = null;
 
-			downx = downx - 400 + player.position.x;
-			downy = downy - 300 + player.position.y;
+	// 		downx = downx - 400 + player.position.x;
+	// 		downy = downy - 300 + player.position.y;
 
-			// Find closest wall from mouse
-			g.objects.lists.collidable.each(function(collidable) {
-				collidable.collisionlines.forEach(function(cl) {
-					t.setV(cl.end);
-					t.substractV(cl.start);
-					t.normalize();
-					t2.set(downx,downy);
-					t2.substractV(cl.start);
-					var d = t.dotV(t2);
-					d = Math.clamp(d,hthickness,cl.length-hthickness);
-					t.multiply(d);
-					var distance = t.distanceToV(t2);
-					if(!c || c.distance > distance) {
-						c = { d: d, distance: distance, cl: cl, collidable: collidable };
-					}
-				});
-			});
+	// 		// Find closest wall from mouse
+	// 		g.objects.lists.collidable.each(function(collidable) {
+	// 			collidable.collisionlines.forEach(function(cl) {
+	// 				t.setV(cl.end);
+	// 				t.substractV(cl.start);
+	// 				t.normalize();
+	// 				t2.set(downx,downy);
+	// 				t2.substractV(cl.start);
+	// 				var d = t.dotV(t2);
+	// 				d = Math.clamp(d,hthickness,cl.length-hthickness);
+	// 				t.multiply(d);
+	// 				var distance = t.distanceToV(t2);
+	// 				if(!c || c.distance > distance) {
+	// 					c = { d: d, distance: distance, cl: cl, collidable: collidable };
+	// 				}
+	// 			});
+	// 		});
 
-			if (!c) { return; }
+	// 		if (!c) { return; }
 
-			if (c.distance > 30) {
-				return;
-			}
+	// 		if (c.distance > 30) {
+	// 			return;
+	// 		}
 
-			g.chains.draw.push(drawSelection);
+	// 		g.chains.draw.push(drawSelection);
 
-			function drawSelection(g,next) {
-				t.setV(c.cl.end);
-				t.substractV(c.cl.start);
-				t.normalize();
-				t.multiply(c.d);
-				t.addV(c.cl.start);
-				g.strokeCircle(t.x,t.y,10);
-			}
+	// 		function drawSelection(g,next) {
+	// 			t.setV(c.cl.end);
+	// 			t.substractV(c.cl.start);
+	// 			t.normalize();
+	// 			t.multiply(c.d);
+	// 			t.addV(c.cl.start);
+	// 			g.strokeCircle(t.x,t.y,10);
+	// 		}
 
-			g.once('mouseup',function(button,upx,upy) {
-				upx = upx - 400 + player.position.x;
-				upy = upy - 300 + player.position.y;
-				var newwall = [];
-				g.chains.draw.remove(drawSelection);
+	// 		g.once('mouseup',function(button,upx,upy) {
+	// 			upx = upx - 400 + player.position.x;
+	// 			upy = upy - 300 + player.position.y;
+	// 			var newwall = [];
+	// 			g.chains.draw.remove(drawSelection);
 
-				t.setV(c.cl.end);
-				t.substractV(c.cl.start);
-				t.normalize();
+	// 			t.setV(c.cl.end);
+	// 			t.substractV(c.cl.start);
+	// 			t.normalize();
 
-				t2.setV(t);
+	// 			t2.setV(t);
 
-				t.multiply(c.d);
+	// 			t.multiply(c.d);
 
-				t.addV(c.cl.start);
+	// 			t.addV(c.cl.start);
 
-				newwall.push(new Vector(t.x-t2.x*hthickness,t.y-t2.y*hthickness));
-				newwall.push(new Vector(upx-t2.x*hthickness,upy-t2.y*hthickness));
-				newwall.push(new Vector(upx+t2.x*hthickness,upy+t2.y*hthickness));
-				newwall.push(new Vector(t.x+t2.x*hthickness,t.y+t2.y*hthickness));
-				g.objects.add(new StaticCollidable(newwall));
-			});
-		});
-	})();
+	// 			newwall.push(new Vector(t.x-t2.x*hthickness,t.y-t2.y*hthickness));
+	// 			newwall.push(new Vector(upx-t2.x*hthickness,upy-t2.y*hthickness));
+	// 			newwall.push(new Vector(upx+t2.x*hthickness,upy+t2.y*hthickness));
+	// 			newwall.push(new Vector(t.x+t2.x*hthickness,t.y+t2.y*hthickness));
+	// 			g.objects.add(new StaticCollidable(newwall));
+	// 		});
+	// 	});
+	// })();
 
 	//#gameobjects
 	function circleFiller(r) {
@@ -388,7 +398,9 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		this.velocity = new Vector(0,0);
 		this.facing = new Vector(1,0);
 		this.firetime = 0;
-		this.collisionRadius = this.touchRadius = 20;
+		this.collisionRadius = 30;
+		this.touchRadius = 20;
+		this.travelled = 0;
 	}
 	(function(p) {
 		var t = new Vector();
@@ -397,18 +409,27 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		p.collide = true;
 		p.touchable = true;
 		p.draw = function(g) {
-			g.fillCircle(this.position.x,this.position.y,this.collisionRadius);
-			t.setV(this.facing);
-			t.multiply(this.collisionRadius-5);
-			t.addV(this.position);
-			g.fillCircle(t.x,t.y,this.collisionRadius*0.5);
+			this.drawPerson(g);
 		};
+		p.drawPerson = function(g,body) {
+			body = body || images.player_body;
+			var a = Math.atan2(this.facing.y,this.facing.x);
+			var me = this;
+			g.rotate(me.position.x,me.position.y,a,function() {
+				g.drawCenteredImage(images.player_shoe,me.position.x+10+Math.cos(me.travelled/7)*10,me.position.y+10);
+				g.drawCenteredImage(images.player_shoe,me.position.x+10+Math.cos(Math.PI+me.travelled/7)*10,me.position.y-10);
+				g.drawCenteredImage(body,me.position.x,me.position.y);
+				g.drawCenteredImage(images.player_head,me.position.x,me.position.y);
+			});
+		}
 		p.updateMovement = function(dt,dx,dy,speed) {
 			// Movement
 			t.set(dx,dy);
 			t.normalizeOr(0,0);
 			t.multiply(speed);
 			this.velocity.addV(t);
+			this.travelled += t.length();
+
 			this.velocity.multiply(0.7);
 			t.setV(this.velocity);
 			this.position.addV(t);
@@ -424,6 +445,7 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 	function Player() {
 		Person.call(this);
 		this.changeState(controlState(this));
+		this.score = 0;
 	}
 	(function(p) {
 		p.__proto__ = Person.prototype;
@@ -442,6 +464,8 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 				me.changeState(stranglingState(me,usable));
 			} else if (usable instanceof Safe) {
 				me.changeState(unlocksafeState(me,usable));
+			} else if (usable instanceof Vehicle) {
+				g.changeState(scorescreenState());
 			}
 		};
 		p.getUsablesInFront = function() {
@@ -468,11 +492,61 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		p.action = function() {
 			if (this.state.action) { this.state.action(); }
 		};
+		p.draw = function(g) {
+			var me = this;
+			if (me.state.draw) {
+				me.state.draw(g,function(g) {
+					Person.prototype.draw.call(me,g);
+				});
+			} else {
+				Person.prototype.draw.call(me,g);
+			}
+		};
+		p.drawProgress = function(g,progress) {
+			g.fillStyle('rgba(255,255,255,0.5)');
+			g.fillLoading(this.position.x,this.position.y,15,progress);
+			g.fillStyle('black');
+		};
+		p.die = function() {
+			Person.prototype.die.call(this);
+			g.objects.handlePending();
+			g.changeState(diedState());
+		};
 	})(Player.prototype);
 
-	g.on('mousedown',function(button) {
-		if (button === 2) { player.action(); }
-	});
+	(function() {
+		g.chains.draw.push(function(g,next) {
+			var me = player;
+			var usables = me.getUsablesInFront();
+			usables.forEach(function(usable) {
+				function drawMessage(str) {
+					g.context.font = 'bold 10pt arial';
+					g.fillStyle('white');
+
+					var x = usable.x || usable.position.x;
+					var y = usable.y || usable.position.y;
+					x += me.position.x;
+					y += me.position.y;
+					x *= 0.5;
+					y *= 0.5;
+					y += 10;
+					g.context.fillText(str,x,y);
+					g.drawCenteredImage(images.mouse,x-16,y);
+					g.fillStyle('black');
+				}
+				if (usable.draggable) {
+					drawMessage('Drag');
+				} else if (usable instanceof Enemy) {
+					drawMessage('Strangle');
+				} else if (usable instanceof Safe) {
+					drawMessage('Unlock');
+				} else if (usable instanceof Vehicle) {
+					drawMessage('Exit level');
+				}
+			});
+			next(g);
+		});
+	})();
 
 	function controlState(me) {
 		return {
@@ -488,15 +562,6 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 				t.set(g.mouse.x-400,g.mouse.y-300);
 				t.normalizeOr(1,0);
 				me.facing.setV(t);
-
-				// Shooting
-				me.firetime -= dt;
-				if (g.mouse.buttons[0] && me.firetime < 0) {
-					t.setV(me.facing);
-					t.multiply(20);
-					me.firetime = 0.1;
-					g.objects.add(new Bullet(me,me.position.x,me.position.y,t.x,t.y));
-				}
 			},
 			action: function() {
 				me.useInFront();
@@ -509,7 +574,7 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 			enable: function() {
 				me.strangling = enemy;
 				enemy.strangler = me;
-				enemy.changeState(strangleState(enemy,this));
+				enemy.changeState(this.strangleState = strangleState(enemy,this));
 			},
 			disable: function() {
 				me.strangling = null;
@@ -523,6 +588,11 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 			},
 			action: function() {
 				// TODO: rapidly tap to succesfully strangle
+			},
+			draw: function(g,next) {
+				//next(g);
+				me.drawPerson(g,images.player_body_strangle);
+				me.drawProgress(g,this.strangleState.progress);
 			}
 		};
 	}
@@ -547,12 +617,16 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 				if (body.collectable) {
 					if (vehicle.position.distanceToV(body.position) < (vehicle.touchRadius+body.touchRadius)) {
 						body.collect();
+						me.score += 1000;
 						me.changeState(controlState(me));
 					}
 				}
 			},
 			action: function() {
 				me.changeState(controlState(me));
+			},
+			draw: function(g,next) {
+				me.drawPerson(g,images.player_body_drag);
 			}
 		};
 	}
@@ -568,6 +642,10 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 					safe.unlock(me);
 					me.changeState(controlState(me));
 				}
+			},
+			draw: function(g,next) {
+				me.drawPerson(g,images.player_body_drag);
+				me.drawProgress(g,1-time/3);
 			}
 		};
 	}
@@ -623,7 +701,6 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		p.usable = true;
 		p.draw = function(g) {
 			Person.prototype.draw.call(this,g);
-			g.fillCenteredText(this.alertness.toFixed(2), this.position.x,this.position.y+40);
 		};
 		p.update = function(dt) {
 			var cantrace = this.cantraceplayer = game.cantrace(this.position.x,this.position.y,player.position.x,player.position.y);
@@ -683,7 +760,11 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 			}
 		};
 	}
-
+	function patrolStateF(ps) {
+		return function(me) {
+			return patrolState(me,ps);
+		};
+	}
 	function patrolState(me,ps) {
 		var t = new Vector(0,0);
 		var nextPositionIndex = null;
@@ -712,7 +793,7 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 					p = ps[nextPositionIndex = (nextPositionIndex+1) % ps.length];
 				}
 				me.rotateToward(dt,p.x,p.y);
-				me.updateMovement(dt,me.facing.x,me.facing.y,0.7);
+				me.updateMovement(dt,me.facing.x,me.facing.y,0.5);
 			}
 		};
 	}
@@ -779,14 +860,18 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 	}
 
 	function investigateState(me,px,py) {
+		var time = 3;
 		return {
 			clone: arguments.callee,
 			enable: function() { },
 			disable: function() { },
 			update: function(dt) {
+				time -= dt;
 				if (me.cantraceplayer) {
 					me.changeState(attackState(me));
 				} else if (me.position.distanceTo(px,py) < 30) {
+					return me.changeState(me.defaultState(me));
+				} else if (time < 0) {
 					return me.changeState(me.defaultState(me));
 				}
 				me.rotateToward(dt,px,py);
@@ -811,7 +896,8 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		function notify() {
 			g.objects.lists.enemy.each(function(enemy) {
 				if (me === enemy) { return; }
-				if (enemy.distanceToV(me.position) < 400) {
+				if (enemy.position.distanceToV(me.position) < 800) {
+					console.log('hallo');
 					enemy.changeState(investigateState(enemy,px,py));
 				}
 			});
@@ -826,6 +912,7 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 			disable: function() { },
 			update: function(dt) {
 				strangleTime -= dt;
+				this.progress = 1-strangleTime / 1.5;
 				if (strangleTime < 0) {
 					me.die();
 					stranglingState.done();
@@ -834,34 +921,47 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		};
 	}
 
-	function DeadBody(x,y) {
+	function DeadBody(x,y,angle) {
 		this.position = new Vector(x,y);
 		this.touchRadius = 20;
+		this.backposition = new Vector(x+100,y);
 	}
 	(function(p) {
+		var t = new Vector(0,0);
 		p.drawable = true;
 		p.usable = true;
 		p.draggable = true;
 		p.draw = function(g) {
-			g.fillStyle('gray');
-			g.fillCircle(this.position.x,this.position.y,20);
-			g.fillStyle('black');
+			var me = this;
+			t.setV(me.backposition);
+			t.substractV(me.position);
+			var angle = Math.atan2(t.y,t.x);
+			if (t.length() > 100) {
+				t.normalize();
+				t.multiply(100);
+				t.addV(me.position);
+				me.backposition.setV(t);
+			}
+			g.rotate(me.position.x,me.position.y,angle,function() {
+				g.drawImage(images.player_dead,me.position.x-25,me.position.y-75);
+			});
 		};
 	})(DeadBody.prototype);
 
-	function Safe(x,y) {
+	function Safe(x,y,angle) {
 		this.position = new Vector(x,y);
+		this.angle = angle;
 		this.touchRadius = 30;
+		this.constArgs = arguments;
 	}
 	(function(p) {
 		p.drawable = true;
 		p.usable = true;
 		p.draw = function(g) {
-			var w = this.usable ? 64 : 50;
-			var hw = w/2;
-			g.fillStyle('#333333');
-			g.fillRectangle(this.position.x-hw,this.position.y-hw,w,w);
-			g.fillStyle('black');
+			var me = this;
+			g.rotate(me.position.x,me.position.y,me.angle,function() {
+				g.drawCenteredImage(me.usable ? images.safe_closed : images.safe_open,me.position.x+15,me.position.y);
+			});
 		};
 		p.unlock = function(unlocker) {
 			// Reindex safe, since it is no longer usable.
@@ -869,14 +969,16 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 			g.objects.handlePending();
 			this.usable = false;
 			g.objects.add(this);
-
-			g.objects.add(new MoneyBag(this.position.x+this.touchRadius+20,this.position.y));
+			var v = new Vector(1,0).rotate(this.angle).multiply(this.touchRadius+20).addV(this.position);
+			g.objects.add(new MoneyBag(v.x,v.y));
 		};
 	})(Safe.prototype);
 
 	function MoneyBag(x,y) {
 		this.position = new Vector(x,y);
 		this.touchRadius = 20;
+		this.constArgs = arguments;
+		this.backposition = new Vector(x+70,y);
 	}
 	(function(p) {
 		p.drawable = true;
@@ -884,9 +986,19 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		p.draggable = true;
 		p.collectable = true;
 		p.draw = function(g) {
-			g.fillStyle('yellow');
-			g.fillCircle(this.position.x,this.position.y,20);
-			g.fillStyle('black');
+			var me = this;
+			t.setV(me.backposition);
+			t.substractV(me.position);
+			var angle = Math.atan2(t.y,t.x);
+			if (t.length() > 70) {
+				t.normalize();
+				t.multiply(70);
+				t.addV(me.position);
+				me.backposition.setV(t);
+			}
+			g.rotate(me.position.x,me.position.y,angle,function() {
+				g.drawImage(images.moneybag,me.position.x-25,me.position.y-75);
+			});
 		};
 		p.collect = function() {
 			g.objects.remove(this);
@@ -895,47 +1007,181 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 
 	function Vehicle(x,y) {
 		this.position = new Vector(x,y);
-		this.touchRadius = 50;
+		this.touchRadius = 95;
+		this.constArgs = arguments;
 	}
 	(function(p) {
 		p.drawable = true;
+		p.usable = true;
 		p.draw = function(g) {
-			g.fillStyle('red');
-			g.fillCircle(this.position.x,this.position.y,50);
-			g.fillStyle('black');
+			g.drawCenteredImage(images.car,this.position.x,this.position.y);
 		};
 	})(Vehicle.prototype);
 
-	var player = new Player();
-	var enemies = [1].map(function() {
-		var enemy = new Enemy(200,400,function(me) {
-			return patrolState(me,[
-			new Vector(500,500),
-			new Vector(200,500),
-			new Vector(200,300),
-			new Vector(500,300)
-			]);
+	function Building(x,y,w,h) {
+		this.x = x;
+		this.y = y;
+		this.w = w;
+		this.h = h;
+		StaticCollidable.call(this,[
+			new Vector(x,y),
+			new Vector(x,y+h),
+			new Vector(x+w,y+h),
+			new Vector(x+w,y)
+		],true);
+		this.constArgs = arguments;
+	}
+	Building.prototype.__proto__ = StaticCollidable.prototype;
+	Building.prototype.draw = function(g,next) {
+		var pattern = g.context.createPattern(images.floor,'repeat');
+		g.fillStyle(pattern);
+		g.fillRectangle(this.x,this.y,this.w,this.h);
+		g.fillStyle('black');
+	};
+
+	function Wall(x,y,w,h,angle,image) {
+		this.x = x;
+		this.y = y;
+		this.angle = angle;
+		this.image = image;
+
+		var right = new Vector(Math.cos(angle),Math.sin(angle));
+		var top = new Vector(0,0).setV(right).normalRight();
+
+		var hw = w*0.5;
+		var hh = h*0.5;
+
+		right.multiply(hw);
+		top.multiply(hh);
+
+		StaticCollidable.call(this,[
+			new Vector(x,y).addV(right).substractV(top),
+			new Vector(x,y).addV(right).addV(top),
+			new Vector(x,y).substractV(right).addV(top),
+			new Vector(x,y).substractV(right).substractV(top)
+		],false);
+
+	}
+	Wall.prototype.__proto__ = StaticCollidable.prototype;
+	Wall.prototype.drawable = true;
+	Wall.prototype.draw = function(g,next) {
+		var me = this;
+		g.rotate(me.x,me.y,me.angle,function() {
+			g.drawCenteredImage(me.image,me.x,me.y);
 		});
-		g.objects.add(enemy);
-		return enemy;
-	});
-	g.objects.add(player);
-	g.objects.add(new StaticCollidable([
-		new Vector(0,0),
-		new Vector(0,600),
-		new Vector(800,600),
-		new Vector(800,0)
-	],true));
-	g.objects.add(new Safe(100,100));
+	};
 
-	var vehicle = new Vehicle(300,100);
-	g.objects.add(vehicle);
+	function createWall(name,w,h,image) {
+		function constructor(x,y,angle) { Wall.call(this,x,y,w,h,angle,image); this.constArgs = arguments; }
+		constructor.prototype.__proto__ = Wall.prototype;
+		constructor.prototype.constructorName = name;
+		return constructor;
+	}
+
+	var Wall100 = createWall('Wall100',30,108*1,images.wall100);
+	var Wall200 = createWall('Wall200',30,108*2,images.wall200);
+	var Wall300 = createWall('Wall300',30,108*3,images.wall300);
+	var Wall600 = createWall('Wall600',30,108*6,images.wall600);
 
 
-[new StaticCollidable([new Vector(459.6938840729227,233.02376624181719),new Vector(489.6936453206643,232.9040788218458),new Vector(555.9998806238708,287.9401562900143),new Vector(526.0001193761292,288.0598437099857)],false),new StaticCollidable([new Vector(800,199),new Vector(800,229),new Vector(596,232),new Vector(596,202)],false),new StaticCollidable([new Vector(215,234),new Vector(211.6127093586714,204.19184235630843),new Vector(486.3063546793357,203.0959211781542),new Vector(489.6936453206643,232.9040788218458)],false),new StaticCollidable([new Vector(180,190),new Vector(210,190),new Vector(215,234),new Vector(185,234)],false),new StaticCollidable([new Vector(94.03505811753999,318.4499165426997),new Vector(124,317),new Vector(129.98247094123,595.2750417286502),new Vector(100.01752905877,596.7249582713498)],false),new StaticCollidable([new Vector(0,323),new Vector(0,293),new Vector(124,287),new Vector(124,317)],false),new StaticCollidable([new Vector(179.8367347310764,158.97959890451617),new Vector(179.9946272810562,188.97918340068313),new Vector(135.0789462749899,183.99979224808348),new Vector(134.9210537250101,154.00020775191652)],false),new StaticCollidable([new Vector(179,0),new Vector(209,0),new Vector(210,190),new Vector(180,190)],false),new StaticCollidable([new Vector(0,185),new Vector(0,155),new Vector(52,155),new Vector(52,185)],false),new StaticCollidable([new Vector(800,0),new Vector(0,0),new Vector(0,600),new Vector(800,600)],true)].
-	forEach(function(sc) {
-		g.objects.add(sc);
-	});
+	//# leveleditor
+	function leveleditorState() {
+		var me = {
+			enable: enable,
+			disable: disable
+		};
+		var constructors = [Wall100,Wall200,Wall300,Wall600,Safe,MoneyBag,Vehicle];
+		var placeConstructor = Wall300;
+		var placeAngle = 0;
+
+		function enable() {
+			g.chains.update.unshift(update);
+			g.chains.draw.push(draw);
+			g.on('mousedown',mousedown);
+			g.on('keydown',keydown);
+		}
+		function disable() {
+			g.chains.update.remove(update);
+			g.chains.draw.remove(draw);
+			g.removeListener('mousedown',mousedown);
+			g.removeListener('keydown',keydown);
+		}
+		function update(dt,next) {
+			var s = (g.keys.right ? 1 : 0) - (g.keys.left ? 1 : 0);
+			placeAngle += s * dt;
+			var cameraSpeed = 200*dt;
+			g.camera.add(
+				((g.keys.a?1:0)-(g.keys.d?1:0))*cameraSpeed,
+				((g.keys.w?1:0)-(g.keys.s?1:0))*cameraSpeed
+			);
+			g.objects.handlePending();
+		}
+		function draw(g,next) {
+			next(g);
+			var o = createObject();
+			o.draw(g);
+		}
+
+		function getAngle() {
+			var d = Math.PI/8;
+			return g.keys.space
+				? placeAngle
+				: parseInt(placeAngle/d)*d;
+		}
+		function getMousePosition() {
+			var v = new Vector(game.mouse.x,game.mouse.y);
+			v.substractV(game.camera);
+			return v;
+		}
+		function createObject() {
+			var v = getMousePosition();
+			v.x = parseInt(v.x);
+			v.y = parseInt(v.y);
+			return new placeConstructor(v.x,v.y,getAngle());
+		}
+		function mousedown(button) {
+			if (button === 0) {
+				g.objects.add(createObject());
+			} else if (button === 2) {
+				g.objects.objects.each(function(o,BREAK) {
+					var v;
+					if (o.x) { v = new Vector(o.x,o.y); }
+					else if (o.position) { v = o.position; }
+					else { return; }
+					console.log(v.distanceToV(getMousePosition()));
+					if (v.distanceToV(getMousePosition()) < 30) {
+						g.objects.remove(o);
+						return BREAK;
+					}
+				});
+			}
+		}
+		function keydown(key) {
+			function select(s) {
+				var i =constructors.indexOf(placeConstructor);
+				i = ((i + s) + constructors.length) % constructors.length;
+				placeConstructor = constructors[i];
+			}
+			console.log('hallo!');
+			if (key === 'm') select(1);
+			if (key === 'n') select(-1);
+		}
+		return me;
+	}
+
+	//# level
+	// var enemies = [1].map(function() {
+	// 	var enemy = new Enemy(200,400,function(me) {
+	// 		return patrolState(me,[
+	// 		new Vector(500,500),
+	// 		new Vector(200,500),
+	// 		new Vector(200,300),
+	// 		new Vector(500,300)
+	// 		]);
+	// 	});
+	// 	g.objects.add(enemy);
+	// 	return enemy;
+	// });
 
 	//#states
 	function gameplayState() {
@@ -947,10 +1193,12 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		function enable() {
 			g.chains.update.push(update);
 			g.chains.draw.push(draw);
+			g.on('mousedown',mousedown);
 		}
 		function disable() {
 			g.chains.update.remove(update);
 			g.chains.draw.remove(draw);
+			g.removeListener('mousedown',mousedown);
 		}
 
 		function update(dt,next) {
@@ -960,6 +1208,88 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		function draw(g,next) {
 			// Draw HUD
 			next(g);
+		}
+		function mousedown(button) {
+			if (button === 0) { player.action(); }
+			if (button === 2) {
+
+			}
+		}
+		return me;
+	}
+
+	function diedState() {
+		var me = {
+			enabled: false,
+			enable: enable,
+			disable: disable
+		};
+		function enable() {
+			console.log('score!');
+			g.chains.update.unshift(update);
+			g.chains.draw.unshift(draw);
+			g.on('mousedown',mousedown);
+		}
+		function disable() {
+			g.chains.update.remove(update);
+			g.chains.draw.remove(draw);
+			g.removeListener('mousedown',mousedown);
+		}
+		function update(dt,next) {
+			// Disable updating
+		}
+		function draw(g,next) {
+			next(g);
+			g.fillStyle('rgba(0,0,0,0.5)');
+			g.fillRectangle(0,0,800,600);
+			g.fillStyle('black');
+
+			g.context.font = '20pt arial';
+			g.fillStyle('white');
+			g.fillCenteredText('You died!',400,300);
+			g.fillCenteredText('Click to restart',400,400);
+		}
+		function mousedown() {
+			g.changeState(gameplayState());
+			g.restartLevel();
+		}
+		return me;
+	}
+
+	function scorescreenState() {
+		var me = {
+			enabled: false,
+			enable: enable,
+			disable: disable
+		};
+		function enable() {
+			console.log('score!');
+			g.chains.update.unshift(update);
+			g.chains.draw.unshift(draw);
+			g.on('mousedown',mousedown);
+		}
+		function disable() {
+			g.chains.update.remove(update);
+			g.chains.draw.remove(draw);
+			g.removeListener('mousedown',mousedown);
+		}
+		function update(dt,next) {
+			// Disable updating
+		}
+		function draw(g,next) {
+			next(g);
+			g.fillStyle('rgba(0,0,0,0.5)');
+			g.fillRectangle(0,0,800,600);
+			g.fillStyle('black');
+
+			g.context.font = '20pt arial';
+			g.fillStyle('white');
+			g.fillCenteredText('Score: '+player.score,400,300);
+			g.fillCenteredText('Sorry but I didn\'t have time for more levels!',400,400);
+		}
+		function mousedown() {
+			g.changeState(gameplayState());
+			g.nextLevel();
 		}
 		return me;
 	}
@@ -980,11 +1310,8 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		createButton('Export',function() {
 			g.export();
 		});
-		createButton('Start Levels',function() {
-			start(level1());
-		});
-		createButton('Sandbox',function() {
-			start(sandboxlevel());
+		createButton('Level editor',function() {
+			g.changeState(leveleditorState());
 		});
 		var c = document.createElement('div');
 		menuDiv.appendChild(c);
@@ -1049,12 +1376,20 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 	// Export Static
 	(function() {
 		function levelToString() {
-			var scs = [];
-			g.objects.lists.collidable.each(function(c) {scs.push(c);});
-			return '['+scs.map(function(sc) {
-				return 'new StaticCollidable(['+sc.collisionlines.map(function(cl) {
-					return 'new Vector('+cl.start.x+','+cl.start.y+')';
-				}).join(',')+'],'+(!!sc.inverted)+')';
+			var objects = [];
+			g.objects.objects.each(function(c) {objects.push(c);});
+			objects = objects.filter(function(o) { return o.constArgs; });
+			function getConstructorName(o) {
+				console.log(o);
+				return o.constructorName || /function (\w+)/.exec(o.__proto__.constructor.toString())[1];
+			}
+			function toArray(arr) {
+				return Array.prototype.slice.call(arr,0);
+			}
+			return '['+objects.map(function(o) {
+				return 'new '+getConstructorName(o)+'('+toArray(o.constArgs).map(function(arg) {
+					return arg.toString();
+				}).join(',')+')';
 			}).join(',')+']';
 		}
 		g.export = function() {
@@ -1062,28 +1397,70 @@ define(['platform','game','vector','staticcollidable','linesegment','editor','re
 		};
 	})();
 
+	var player;
+	var vehicle;
+	var building;
+	g.on('levelchanged',function() {
+		player = new Player();
+		player.position.set(100,200);
+		g.objects.add(player);
+		g.objects.objects.each(function(o) {
+			if (o.__proto__.constructor === Vehicle) {
+				vehicle = o;
+			}
+			if (o.__proto__.constructor === Building) {
+				building = o;
+			}
+		});
+	});
+	g.chains.draw.insertBefore(function(g,next) {
+		building.draw(g);
+		next(g);
+	},g.chains.draw.objects);
+
+	g.on('levelunloaded',function() {
+		g.objects.clear();
+		g.objects.handlePending();
+	});
+
+	g.changeLevel(testlevel());
 	//#levels
 	function testlevel() {
 		return {
 			name: 'Test',
-			objects: [new StaticCollidable([
-				new Vector(0,0),
-				new Vector(0,600),
-				new Vector(800,600),
-				new Vector(800,0)
-			],true),
-			new Finish(700,400),
-			new StaticText(300,100,'Tutorial','60px Permanent Marker'),
-			new StaticText(300,200,'This is a creature created from blobs and muscles'),
-			new StaticText(450,250,'You can control muscles by pressing the key that is next to it'),
-			new StaticText(400,300,'Try pressing 1 and 2 and get to the finish'),
-			new StaticText(400,325,'Press R to reset'),
-			new StaticArrow(80,300,80)
-			],
-			creature: creatures.square,
+			objects: [
+				new Safe(498,250,-0.2170000000000002),
+				new Safe(807,604,-2.8829999999999942),
+				new Vehicle(100,80,0),
+				new Wall100(369,507,0),
+				new Wall100(799,310,1.5707963267948966),
+				new Wall200(559,310,1.5707963267948966),
+				new Wall600(531,438,1.5707963267948966),
+				new Wall100(54,435,1.5707963267948966),
+				new Wall300(161,306,1.5707963267948966),
+				new Wall300(437,162,0),
+				new Building(0,0,855,650)
+			].concat([
+				new Enemy(297,396,patrolStateF([
+					new Vector(297,396),
+					new Vector(27,394),
+					new Vector(28,346),
+					new Vector(295,345)
+				])),
+				new Enemy(431,497,patrolStateF([
+					new Vector(431,497),
+					new Vector(430,618),
+					new Vector(698,620),
+					new Vector(693,494)
+				])),
+				new Enemy(672,239,patrolStateF([
+					new Vector(672,239),
+					new Vector(527,66),
+					new Vector(798,75)
+				]))
+			]),
 			clone: arguments.callee,
-			nextLevel: tutorial2,
-			controlonly: true
+			nextLevel: null
 		};
 	}
 

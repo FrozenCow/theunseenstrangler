@@ -57,6 +57,19 @@ define(function() {
 		this.circle(x,y,radius);
 		this.context.fill();
 	};
+	p.fillLoading = function(x,y,radius,fraction) {
+		var c = this.context;
+		var abegin = ((fraction*360)-90)*(Math.PI/180);
+		var aend = (0-90)*(Math.PI/180);
+
+		c.beginPath();
+		c.moveTo(x,y);
+		c.lineTo(x+Math.cos(abegin)*radius,y+Math.sin(abegin)*radius);
+		c.arc(x,y,radius,abegin,aend,false);
+		c.lineTo(x,y);
+		c.closePath();
+		c.fill();
+	};
 	p.line = function(x1,y1,x2,y2) {
 		this.context.beginPath();
 		this.context.moveTo(x1,y1);
