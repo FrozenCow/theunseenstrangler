@@ -38,6 +38,7 @@ define(['intrusivelist','dintrusivelist'],function(IntrusiveList,DIntrusiveList)
 		});
 		me.pendingRemove.each(function(o,_,DELETE) {
 			delete o.__pendingRemove;
+			me.objects.remove(o);
 			for(var n in me.lists) {
 				if (o[me.lists[n].property]) {
 					me.lists[n].remove(o);
