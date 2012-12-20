@@ -9,7 +9,7 @@ body {
 	font-size:15px;
 }
 #main {
-	/*background-color: black;*/
+	background-color: black;
 }
 #main, .overlay {
 	width: 800px;
